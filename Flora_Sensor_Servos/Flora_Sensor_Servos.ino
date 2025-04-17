@@ -9,33 +9,34 @@
 #define LIGHT_SENSOR_3 34 // D34 - left 
 #define LIGHT_SENSOR_4 15 // D15 - back
 
+Servo servo1;
+Servo servo2;
+
 // Servo pins
-#define SERVO_2 32 // Working
-#define SERVO_4 13 // Working
+#define SERVO_1 32
+#define SERVO_2 13
 
 // Motor A (left)
-#define ENA 12 // 17 // TX2
-#define IN1 14// 18 // D18
-#define IN2 27// 19 // D19
+#define ENA 17
+#define IN1 18
+#define IN2 19
 
 // Motor B (right)
-#define ENB 25 // 21 // D21
-#define IN3 26// 4 // D4
-#define IN4 22 // D23
+#define ENB 21
+#define IN3 4
+#define IN4 23
 
 #define NUM_SENSORS 4
 #define WINDOW_SIZE 20
-#define LOWER_THRESHOLD 1.2
-#define UPPER_THRESHOLD 2.0
+#define BRIGHT_THRESHOLD 1.2
+#define STOP_THRESHOLD 2.0
 
 // Servo range
 #define USMIN 600
 #define USMAX 2400
 
-// Setup objects and arrays
-Servo servo2;
-Servo servo4;
 
+// Sensor processing
 int sensorPins[NUM_SENSORS] = {
   LIGHT_SENSOR_1,
   LIGHT_SENSOR_2,
@@ -47,18 +48,20 @@ float baseline[NUM_SENSORS] = {0};
 float baselineStdDev[NUM_SENSORS] = {0};
 int recentReadings[NUM_SENSORS][WINDOW_SIZE] = {0};
 int sampleCount = 0;
-bool calibrated = false;
 int bufferIndex = 0;
+bool calibrated = false;
+
+// Bloom state
+bool lightDetected = false;
+bool petalsOpen = false;
 
 void setup() {
   Serial.begin(115200);
   Serial.println("Robotic Flower - Light Navigation Setup");
 
-  // Attach servos
+  servo1.attach(SERVO_1, USMIN, USMAX);
   servo2.attach(SERVO_2, USMIN, USMAX);
-  servo4.attach(SERVO_4, USMIN, USMAX);
 
-  // Set motor pins
   pinMode(ENA, OUTPUT);
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
@@ -67,14 +70,19 @@ void setup() {
   pinMode(IN4, OUTPUT);
 
   closeAllPetals();
-  delay(500);
+  Serial.println("Idle start: petals closed for 1 minute.");
+  // delay(60000); // Idle for 60 seconds
+  delay(500); // 500 milliseconds = 0.5 seconds
+
+  Serial.println("Getting started!");
+  spin360();
 }
 
 void loop() {
   int readings[NUM_SENSORS];
   float currentAvg[NUM_SENSORS] = {0};
 
-  // Read current sensor values and store them in rolling buffer
+  // Read and store sensor values
   for (int i = 0; i < NUM_SENSORS; i++) {
     readings[i] = analogRead(sensorPins[i]);
     recentReadings[i][bufferIndex] = readings[i];
@@ -90,7 +98,7 @@ void loop() {
   }
 
   if (!calibrated) {
-    // Calculate baseline and standard deviation
+    // Compute baseline and std deviation
     for (int i = 0; i < NUM_SENSORS; i++) {
       float sum = 0;
       for (int j = 0; j < WINDOW_SIZE; j++) {
@@ -114,7 +122,6 @@ void loop() {
   int brightestDirection = -1;
   float maxRatio = 0;
 
-  // Calculate current stats
   for (int i = 0; i < NUM_SENSORS; i++) {
     float sum = 0;
     for (int j = 0; j < WINDOW_SIZE; j++) {
@@ -130,7 +137,6 @@ void loop() {
 
     stdDevRatio[i] = baselineStdDev[i] > 0 ? currentStdDev[i] / baselineStdDev[i] : 0;
 
-    // Only consider directions where the average got LOWER (i.e. brighter)
     if (stdDevRatio[i] > maxRatio && currentAvg[i] < baseline[i]) {
       maxRatio = stdDevRatio[i];
       brightestDirection = i;
@@ -147,36 +153,48 @@ void loop() {
   Serial.print("Max ratio = ");
   Serial.println(maxRatio);
 
-  if (maxRatio > UPPER_THRESHOLD && brightestDirection == 0) {
-    Serial.println("Destination reached — bright light ahead! Opening petals.");
-    openAllPetals();
-    stopMotors();
-  }
-  else if (maxRatio > LOWER_THRESHOLD) {
-    Serial.print("Turning toward direction: ");
+  // Light-based behavior
+  if (maxRatio > BRIGHT_THRESHOLD) {
+    lightDetected = true;
+    Serial.print("Significant light detected. Direction: ");
     Serial.println(brightestDirection);
 
-    rotateToward(brightestDirection);
-    closeAllPetals();
-  }
-  else {
-    Serial.println("No significant change — stopping.");
-    closeAllPetals();
+    if (brightestDirection == 0 && maxRatio > STOP_THRESHOLD) {
+      Serial.println("Bright light ahead. Stopping.");
+      flutterPetals();
+      stopMotors();
+    } else {
+      rotateToward(brightestDirection);
+    }
+  } else {
+    lightDetected = false;
+    Serial.println("No significant light detected.");
     stopMotors();
+  }
+
+  // Petal control based on light presence
+  if (lightDetected && !petalsOpen) {
+    openAllPetals();
+    petalsOpen = true;
+  } else if (!lightDetected && petalsOpen) {
+    closeAllPetals();
+    petalsOpen = false;
   }
 
   Serial.println("--------");
   delay(500);
 }
 
+// Movement and servo control
+
 void openAllPetals() {
+  servo1.write(90);
   servo2.write(90);
-  servo4.write(90);
 }
 
 void closeAllPetals() {
+  servo1.write(0);
   servo2.write(0);
-  servo4.write(0);
 }
 
 void stopMotors() {
@@ -212,16 +230,16 @@ void rotateToward(int direction) {
       digitalWrite(IN4, LOW);
       analogWrite(ENB, 150);
       break;
-    case 3: // Back (turn 180)
+    case 3: // Back (180° turn)
       digitalWrite(IN1, HIGH);
       digitalWrite(IN2, LOW);
       analogWrite(ENA, 150);
       digitalWrite(IN3, LOW);
       digitalWrite(IN4, HIGH);
       analogWrite(ENB, 150);
-      delay(800); // Rotate more for full turn
+      delay(800);
       break;
-    default: // Already forward (sensor 0)
+    default: // Forward
       moveForward();
       break;
   }
@@ -230,9 +248,31 @@ void rotateToward(int direction) {
   stopMotors();
 }
 
-void spin() {
-  
+spin360() {
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  analogWrite(ENA, 150);
+
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+  analogWrite(ENB, 150);
+
+  delay(1600); // Calibrate this to complete one full rotation
+
+  stopMotors();
 }
 
 
+void flutterPetals(int times = 3) {
+  for (int i = 0; i < times; i++) {
+    servo2.write(60);
+    servo4.write(60);
+    delay(200);
+    servo2.write(120);
+    servo4.write(120);
+    delay(200);
+  }
 
+  // Return to open position after dancing
+  openAllPetals();
+}
