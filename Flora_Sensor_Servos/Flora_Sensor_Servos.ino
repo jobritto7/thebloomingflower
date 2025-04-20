@@ -101,14 +101,16 @@ void setup() {
   pinMode(ENB, OUTPUT);
   pinMode(IN3, OUTPUT);
   pinMode(IN4, OUTPUT);
+  pinMode(ENC, OUTPUT);
+  pinMode(IN5, OUTPUT);
+  pinMode(IN6, OUTPUT);
+  pinMode(END, OUTPUT);  // Added
+  pinMode(IN7, OUTPUT);  // Added
+  pinMode(IN8, OUTPUT);  // Added
 
   closeAllPetals();
   Serial.println("Idle start: petals closed for 1 minute.");
-  // delay(60000); // Idle for 60 seconds
-  // delay(500); // 500 milliseconds = 0.5 seconds
-
   Serial.println("Getting started!");
-  // spin360();
 }
 
 void spin360() {
