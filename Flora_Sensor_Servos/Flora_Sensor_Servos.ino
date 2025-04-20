@@ -18,15 +18,26 @@ Servo servo2;
 #define SERVO_1 32
 #define SERVO_2 13
 
-// Motor A (left)
+// Motor A (left) - front
 #define ENA 17
 #define IN1 18
 #define IN2 19
 
-// Motor B (right)
+// Motor B (right) - front
 #define ENB 21
 #define IN3 4
 #define IN4 23
+
+// Motor C - left back
+#define ENC 12
+#define IN5 14
+#define IN6 27
+
+// Motor D - right back
+#define END 25
+#define IN7 26
+#define IN8 22
+
 
 #define NUM_SENSORS 4
 #define WINDOW_SIZE 20
@@ -331,17 +342,27 @@ void stopMotors() {
   Serial.println("stopMotors");
   analogWrite(ENA, 0);
   analogWrite(ENB, 0);
+  analogWrite(ENC, 0);
+  analogWrite(END, 0);
 }
 
 void moveForward() {
   Serial.println("moveForward");
   digitalWrite(IN1, HIGH);
   digitalWrite(IN2, LOW);
-  analogWrite(ENA, 200);
+  analogWrite(ENA, 220);
 
   digitalWrite(IN3, HIGH);
   digitalWrite(IN4, LOW);
-  analogWrite(ENB, 200);
+  analogWrite(ENB, 220);
+
+  digitalWrite(IN5, HIGH);
+  digitalWrite(IN6, LOW);
+  analogWrite(ENC, 220);
+
+  digitalWrite(IN7, HIGH);
+  digitalWrite(IN8, LOW);
+  analogWrite(END, 220);
 }
 
 void rotateToward(int direction) {
@@ -350,28 +371,44 @@ void rotateToward(int direction) {
       Serial.println("Turning right");
       digitalWrite(IN1, HIGH);
       digitalWrite(IN2, LOW);
-      analogWrite(ENA, 150);
+      analogWrite(ENA, 220);
       digitalWrite(IN3, LOW);
       digitalWrite(IN4, HIGH);
-      analogWrite(ENB, 150);
+      analogWrite(ENB, 220);
       break;
     case 2: // Left
       Serial.println("Turning left");
       digitalWrite(IN1, LOW);
       digitalWrite(IN2, HIGH);
-      analogWrite(ENA, 150);
+      analogWrite(ENA, 220);
+
       digitalWrite(IN3, HIGH);
       digitalWrite(IN4, LOW);
-      analogWrite(ENB, 150);
+      analogWrite(ENB, 220);
+
+      digitalWrite(IN5, HIGH);
+      digitalWrite(IN6, LOW);
+      analogWrite(ENC, 220);
+
+      digitalWrite(IN7, LOW);
+      digitalWrite(IN8, HIGH);
+      analogWrite(END, 220);
+      
       break;
     case 3: // Back (180° turn)
       Serial.println("180 turn");
       digitalWrite(IN1, HIGH);
       digitalWrite(IN2, LOW);
-      analogWrite(ENA, 150);
+      analogWrite(ENA, 220);
       digitalWrite(IN3, LOW);
       digitalWrite(IN4, HIGH);
-      analogWrite(ENB, 150);
+      analogWrite(ENB, 220);
+      digitalWrite(IN5, HIGH);
+      digitalWrite(IN6, LOW);
+      analogWrite(ENC, 220);
+      digitalWrite(IN7, LOW);
+      digitalWrite(IN8, HIGH);
+      analogWrite(END, 220);
       delay(800);
       break;
     default: // Forward
