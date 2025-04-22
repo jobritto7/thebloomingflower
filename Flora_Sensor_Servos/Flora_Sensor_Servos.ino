@@ -57,17 +57,18 @@ int sensorPins[NUM_SENSORS] = {
 };
 
 int sensorThreshold1s[NUM_SENSORS] = {
-  10,
-  15,
-  15,
-  15
+  10, 35, 30, 35
+  // 10,
+  // 15,
+  // 15,
+  // 15
 };
 
 int sensorThreshold2s[NUM_SENSORS] = {
-  100,
-  25,
-  25,
-  25
+  150,
+  150,
+  150,
+  150
 };
 int thresh1Counter[NUM_SENSORS] = {0};
 int thresh2Counter[NUM_SENSORS] = {0};
@@ -330,7 +331,7 @@ void calibrate(int recent[NUM_SENSORS][WINDOW_SIZE]) {
 
 void openAllPetals() {
   Serial.println("openAllPetals");
-  servo1.write(90);
+  servo1.write(160);
   servo2.write(90);
 }
 
@@ -402,15 +403,19 @@ void rotateToward(int direction) {
       digitalWrite(IN1, HIGH);
       digitalWrite(IN2, LOW);
       analogWrite(ENA, 220);
+
       digitalWrite(IN3, LOW);
       digitalWrite(IN4, HIGH);
       analogWrite(ENB, 220);
-      digitalWrite(IN5, HIGH);
-      digitalWrite(IN6, LOW);
+
+      digitalWrite(IN5, LOW);
+      digitalWrite(IN6, HIGH);
       analogWrite(ENC, 220);
-      digitalWrite(IN7, LOW);
-      digitalWrite(IN8, HIGH);
+
+      digitalWrite(IN7, HIGH);
+      digitalWrite(IN8, LOW);
       analogWrite(END, 220);
+
       delay(800);
       break;
     default: // Forward
